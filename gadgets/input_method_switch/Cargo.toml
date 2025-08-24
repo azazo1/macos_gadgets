@@ -1,0 +1,9 @@
+[package]
+name = "input_method_switch"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[dependencies]
+rdev = "0.5"

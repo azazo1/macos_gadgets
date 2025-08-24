@@ -1,0 +1,9 @@
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["azazo1 <azazo1@qq.com>"]
+description = "Some gadgets in MacOS."
+
+[workspace]
+members = ["gadgets/input_method_switch"]
+resolver = "3"
