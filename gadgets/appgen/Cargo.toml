@@ -1,0 +1,22 @@
+[package]
+name = "appgen"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+readme = "README.md"
+authors.workspace = true
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
+plist = "1.5"
+fs_extra = "1.3"
+chrono = "0.4.41"
+
+[[bin]]
+name = "appgen"
+path = "src/main.rs"
+
+[[example]]
+name = "log_example"
+path = "src/log_example.rs"

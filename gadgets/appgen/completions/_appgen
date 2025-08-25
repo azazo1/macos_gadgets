@@ -1,0 +1,27 @@
+#compdef appgen
+
+_arguments -s -C \
+  '-e[Path to the executable file to package]:executable:_files' \
+  '--executable=[Path to the executable file to package]:executable:_files' \
+  '-n[Name of the app (without .app extension)]:name:' \
+  '--name=[Name of the app (without .app extension)]:name:' \
+  '-i[Optional icon file path (.icns format)]:icon:_files -g "*.icns"' \
+  '--icon=[Optional icon file path (.icns format)]:icon:_files -g "*.icns"' \
+  '-v[Optional app version]:version:(1.0.0 1.0.1 1.1.0 2.0.0)' \
+  '--app-version=[Optional app version]:version:(1.0.0 1.0.1 1.1.0 2.0.0)' \
+  '-b[Optional bundle identifier]:bundle_id:' \
+  '--bundle-id=[Optional bundle identifier]:bundle_id:' \
+  '-o[Output directory]:directory:_path_files -/' \
+  '--output=[Output directory]:directory:_path_files -/' \
+  '-a[Additional files to include]:file:_files' \
+  '--additional-file=[Additional files to include]:file:_files' \
+  '-d[Default location for additional files]:location:(resources macos contents)' \
+  '--default-location=[Default location for additional files]:location:(resources macos contents)' \
+  '-t[Show terminal window when the application runs]' \
+  '--show-terminal[Show terminal window when the application runs]' \
+  '-s[Enable single instance mode]' \
+  '--single-instance[Enable single instance mode]' \
+  '-h[Show help message]' \
+  '--help[Show help message]' \
+  '-V[Show version information]' \
+  '--version[Show version information]'

@@ -1,0 +1,27 @@
+#!/bin/bash
+# 用当前的日期和 pid 创建唯一后缀.
+iconset_parent="/tmp/icnsgen_$(date +%s)_$$"
+iconset_path="$iconset_parent/icons.iconset"
+input_png="$1"
+icns_output="${input_png%.*}.icns"
+if [ ! -f "$input_png" ]; then
+    echo "File not found(or it isn't file): $input_png."
+    exit 1
+fi
+mkdir -p $iconset_path
+
+sips -z 16 16 $input_png -o $iconset_path/icon_16x16.png
+sips -z 32 32 $input_png -o $iconset_path/icon_16x16@2x.png
+sips -z 32 32 $input_png -o $iconset_path/icon_32x32.png
+sips -z 64 64 $input_png -o $iconset_path/icon_32x32@2x.png
+sips -z 128 128 $input_png -o $iconset_path/icon_128x128.png
+sips -z 256 256 $input_png -o $iconset_path/icon_128x128@2x.png
+sips -z 256 256 $input_png -o $iconset_path/icon_256x256.png
+sips -z 512 512 $input_png -o $iconset_path/icon_256x256@2x.png
+sips -z 512 512 $input_png -o $iconset_path/icon_512x512.png
+sips -z 1024 1024 $input_png -o $iconset_path/icon_512x512@2x.png
+
+iconutil -c icns $iconset_path -o $icns_output \
+    && echo "Written output to $icns_output" \
+    || echo "Failed to generate $icns_output"
+rm -r $iconset_parent
