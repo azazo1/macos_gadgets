@@ -1,0 +1,113 @@
+## LaunchAgents
+
+开机启动加后台运行 cli 程序的比较好的选择, 但是可能 rdev 无法监测到按键事件.
+
+### 准备 plist 文件
+
+创建文件: `~/Library/LaunchAgents/com.example.domain.plist`.
+这里的 `com.example.domain` 需要根据不同的应用调整不同的域名.
+
+文件内容模板:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+   <key>Label</key>
+   <string>com.example.domain</string>
+
+   <!-- 要执行的命令，必须是绝对路径 -->
+   <key>ProgramArguments</key>
+   <array>
+      <!-- 这里的一个 string tag 不能包括多个参数, 不然会被当成一个完整的字符串参数被传递 -->
+      <string>/opt/myapp/mycli</string>
+      <string>--daemon</string>
+   </array>
+
+   <!-- 启动类型：登录后立刻跑 -->
+   <key>RunAtLoad</key>
+   <true/>
+
+   <!-- 下面的标准输出可以手动指定路径, 估计可以当做是日志输出目录 -->
+   <key>StandardOutPath</key>
+   <string>/dev/null</string>
+   <key>StandardErrorPath</key>
+   <string>/dev/null</string>
+
+   <!-- 是否保证其运行, 相当于 docker 中的 restart: always -->
+   <key>KeepAlive</key>
+   <true/>
+
+   <!-- 如果想每 3600 秒跑一轮，可再加下面两行（可去掉） -->
+   <key>StartInterval</key>
+   <integer>3600</integer>
+</dict>
+</plist>
+```
+
+### 加载
+
+填写完 plist 文件之后, 需要加载 plist 文件到当前用户 gui 域来准备开启启动.
+
+```shell
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.domain.plist
+```
+
+- 执行完之后就会自动执行 plist 中指定的程序
+  (没有终端界面, 后台运行, 可以单独执行 `osascript -e 'display dialog "你好"'` 来验证这一点).
+
+>[!warning] Deprecated
+>
+> ```shell
+> launchctl load ~/Library/LaunchAgents/com.example.domain.plist
+> ```
+>
+> 这种方式已经被废弃
+
+### 查看状态
+
+关闭终端，注销并重新登录，程序应该已经在后台跑。
+查看日志/状态：
+
+```shell
+launchctl list | grep com.example.domain
+```
+
+- 如果第二个数字是 0, 那么表示创建的程序正常执行.
+
+### 卸载
+
+如果需要停止并卸载, 那么可以使用:
+
+```shell
+launchctl bootout gui/$(id -u)/com.example.domain
+```
+---
+
+参考以上信息, 帮我完成launchit项目, 其是个tui应用,
+要求使用 ratatui实现, 在终端中启动 launchit, 就会自动启动tui程序,
+
+并且需要提供额外的功能:
+- 创建新的启动项在 `gui/$(id -u)` 下.
+- 列出launchctl 中 `gui/$(id -u)` 下的服务.
+- 选择并使用 launchctl 启用/禁用/卸载当前的 `gui/$(id -u)` 下的启动项.
+- launchit tui运行的时候检查服务状态, 将异常的服务显示为红色 并显示错误码.
+
+创建启动项的时候有以下要求,
+- 逐个询问创建启动项所需的信息:
+  - 启动项域名信息.
+  - 需要放入启动项的程序
+  - 需要添加的程序参数, 逐个添加.
+  - 是否需要 KeepAlive
+  - 标准输出和标准错误流输出到哪
+  - StartInterval 是否需要, 如果不需要, 那么上面的xml中对应的那两行可以不添加
+- 需要提供快捷键选择修改指定的信息(或者 j/k, ctrl-n/p 来选择使用特定键位进入修改界面).
+
+---
+
+这里在创建新的launchagent 的时候要求填写信息的时候使用特定的输入框库,
+不要手动实现, 不然 j/k无法输入而是被解析成切换了,
+然后create和 cancel按钮有时候不显示, 修复一下这个bug,
+然后如果是输入路径的位置, 要求提供自动补全
