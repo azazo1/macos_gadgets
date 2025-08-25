@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Function to prompt user for input
+prompt() {
+    local message=$1
+    local default=$2
+    read -e -p "$message [$default]: " input # Added -e for readline completion
+    echo "${input:-$default}"
+}
+
+# Interactive prompts for plist configuration
+label=$(prompt "Enter the Label for the LaunchAgent" "com.example.myagent")
+program_args_input=$(IFS=' ' prompt "Enter the Program command to execute" "/path/to/your/program args...")
+start_interval=$(prompt "Enter the StartInterval in seconds (leave empty for none)" "")
+run_at_load=$(prompt "Should it run at load? (true/false)" "true")
+keep_alive=$(prompt "Should it keep alive? (true/false)" "true")
+save_to_file=$(prompt "Where to save the plist file? (without filename)" "~/Library/LaunchAgents/")
+save_to_file="${save_to_file%/}/${label}.plist"
+
+cat >$save_to_file <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+EOF
+
+if [ ! -f "$save_to_file" ]; then
+    echo "Error: $save_to_file no such file, maybe due to permission denied."
+    exit 1
+fi
+
+# Generate the plist file content
+cat >>$save_to_file <<EOF
+<dict>
+    <key>Label</key>
+    <string>$label</string>
+    <key>ProgramArguments</key>
+    <array>
+EOF
+
+# Loop through the arguments and add them to the array
+if [ -n "$program_args_input" ]; then
+    IFS=' ' read -r -a args <<< "$program_args_input"
+    for arg in "${args[@]}"; do
+    cat >>$save_to_file <<EOF
+        <string>$arg</string>
+EOF
+    done
+fi
+
+cat >>$save_to_file <<EOF
+    </array>
+EOF
+
+if [[ -n "$start_interval" ]]; then
+    cat >>$save_to_file <<EOF
+    <key>StartInterval</key>
+    <integer>$start_interval</integer>
+EOF
+fi
+
+cat >>$save_to_file <<EOF
+    <key>RunAtLoad</key>
+    <$run_at_load/>
+    <key>KeepAlive</key>
+    <$keep_alive/>
+</dict>
+</plist>
+EOF
+echo "Output Result (saved to $save_to_file):"
+echo
+cat $save_to_file
