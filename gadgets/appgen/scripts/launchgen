@@ -63,6 +63,13 @@ cat >>$save_to_file <<EOF
     <$run_at_load/>
     <key>KeepAlive</key>
     <$keep_alive/>
+
+   <!-- 设置环境变量 -->
+   <key>EnvironmentVariables</key>
+   <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+   </dict>
 </dict>
 </plist>
 EOF
