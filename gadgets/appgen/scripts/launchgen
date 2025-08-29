@@ -14,6 +14,8 @@ program_args_input=$(IFS=' ' prompt "Enter the Program command to execute" "/pat
 start_interval=$(prompt "Enter the StartInterval in seconds (leave empty for none)" "")
 run_at_load=$(prompt "Should it run at load? (true/false)" "true")
 keep_alive=$(prompt "Should it keep alive? (true/false)" "true")
+standard_out_path=$(prompt "Enter the StandardOutPath" "/dev/null")
+standard_err_path=$(prompt "Enter the StandardErrorPath" "/dev/null")
 save_to_file=$(prompt "Where to save the plist file? (without filename)" "~/Library/LaunchAgents/")
 save_to_file="${save_to_file%/}/${label}.plist"
 
@@ -63,6 +65,10 @@ cat >>$save_to_file <<EOF
     <$run_at_load/>
     <key>KeepAlive</key>
     <$keep_alive/>
+    <key>StandardOutPath</key>
+    <string>$standard_out_path</string>
+    <key>StandardErrorPath</key>
+    <string>$standard_err_path</string>
 
    <!-- 设置环境变量 -->
    <key>EnvironmentVariables</key>
@@ -74,5 +80,16 @@ cat >>$save_to_file <<EOF
 </plist>
 EOF
 echo "Output Result (saved to $save_to_file):"
+
 echo
 cat $save_to_file
+echo 
+
+# Check if StandardOutPath and StandardErrorPath are writable
+if [ ! -w "$standard_out_path" ]; then
+    echo "Warning: StandardOutPath ($standard_out_path) is not writable."
+fi
+
+if [ ! -w "$standard_err_path" ]; then
+    echo "Warning: StandardErrorPath ($standard_err_path) is not writable."
+fi
