@@ -6,5 +6,5 @@ description = "Some gadgets in MacOS."
 readme = "README.md"
 
 [workspace]
-members = ["gadgets/input_method_switch", "gadgets/appgen", "gadgets/watch_downloads"]
+members = ["gadgets/input_method_switch", "gadgets/appgen", "gadgets/watch_downloads", "gadgets/forward_url_proxy"]
 resolver = "3"
