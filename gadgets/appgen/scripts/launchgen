@@ -10,8 +10,7 @@ prompt() {
 
 # Interactive prompts for plist configuration
 label=$(prompt "Enter the Label for the LaunchAgent" "com.example.myagent")
-program_args_input=$(IFS=' ' prompt "Enter the Program command to execute" "/path/to/your/program args...")
-program_args_input=$(realpath $program_args_input)
+program_args_input=$(IFS=' ' prompt "Enter the Program command to execute" "/absolute/path/to/your/program args...")
 start_interval=$(prompt "Enter the StartInterval in seconds (leave empty for none)" "")
 run_at_load=$(prompt "Should it run at load? (true/false)" "true")
 keep_alive=$(prompt "Should it keep alive? (true/false)" "true")
