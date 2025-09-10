@@ -7,8 +7,8 @@ use axum::{
 };
 use clap::Parser;
 use reqwest::{Client, Proxy};
-use std::{collections::HashMap, io::Result, path::PathBuf, str::FromStr};
-use std::{io::Write, net::SocketAddr};
+use std::net::SocketAddr;
+use std::{collections::HashMap, io::Result};
 use tokio::net::TcpListener;
 use tracing::{error, info};
 use url::Url;
@@ -26,7 +26,7 @@ struct Args {
 // 每次请求构建一个新的Client也是可行的，但共享Client通常更高效。
 #[derive(Clone)]
 struct AppState {
-    http_client: Client,
+    _http_client: Client,
 }
 
 // 异步处理函数，用于转发请求
@@ -148,40 +148,8 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let port = args.port;
 
-    // 获取当前可执行文件的路径
-    let exe_path = std::env::current_exe()?;
-    let current_dir: PathBuf = exe_path
-        .parent()
-        .map(|x| x.to_owned())
-        .unwrap_or_else(|| PathBuf::from_str(".").unwrap());
-
-    // 构建日志文件路径
-    let log_file_name = format!("{}.log", exe_path.file_stem().unwrap().to_string_lossy());
-    let log_file_path = current_dir.join(log_file_name);
-
     // 初始化日志系统
-    // 设置默认日志级别为 info
-    unsafe {
-        std::env::set_var("RUST_LOG", "info");
-    }
-    // 使用 env_logger 将日志输出到文件
-    let file = std::fs::File::create(&log_file_path).expect("Failed to create log file");
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .target(env_logger::Target::Pipe(Box::new(file)))
-        .format(|buf, record| {
-            // 自定义日志格式
-            use chrono::Local;
-            let now = Local::now().format("%Y-%m-%d %H:%M:%S");
-            writeln!(
-                buf,
-                "{} | {} | {} | {}",
-                now,
-                record.module_path().unwrap_or("unknown"),
-                record.level(),
-                record.args()
-            )
-        })
-        .init();
+    tracing_subscriber::fmt().init();
 
     info!("Starting Forward URL Proxy on http://localhost:{}", port);
     info!(
@@ -192,7 +160,7 @@ async fn main() -> Result<()> {
     // 构建应用程序状态 (AppState)
     let app_state = AppState {
         // 在这里创建 reqwest Client，可以配置一些默认值
-        http_client: Client::new(),
+        _http_client: Client::new(),
     };
 
     // 构建 Axum 路由
