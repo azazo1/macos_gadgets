@@ -1,9 +1,13 @@
 use std::thread;
 use std::time::Duration;
 use std::{collections::HashSet, fs};
+use tracing::info;
 use watch_downloads::{MDirEntry, cpcb_file};
 
 fn main() {
+    tracing_subscriber::fmt().init();
+
+    info!("watch_downloads launched.");
     let download_dir = dirs::download_dir().unwrap();
     let mut file_set: HashSet<MDirEntry> = HashSet::new();
     let mut first = true;
@@ -17,7 +21,7 @@ fn main() {
             for f in &cur_files {
                 if !file_set.contains(&f.try_into().unwrap()) {
                     cpcb_file(f.path()).unwrap();
-                    println!("copy: {}", f.path().to_string_lossy());
+                    info!("copy: {}", f.path().to_string_lossy());
                     break;
                 }
             }

@@ -6,8 +6,18 @@ name = "watch_downloads"
 readme = "README.md"
 version.workspace = true
 
+[lib]
+name = "watch_downloads"
+path = "src/lib.rs"
+
+[[bin]]
+name = "watch_downloads"
+path = "src/main.rs"
+
 [dependencies]
 clipboard-rs = "0.3.0"
 dirs = "6.0.0"
 thiserror = "2.0.16"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.20"
 url = "2.5.7"
