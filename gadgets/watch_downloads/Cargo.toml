@@ -1,0 +1,13 @@
+[package]
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+name = "watch_downloads"
+readme = "README.md"
+version.workspace = true
+
+[dependencies]
+clipboard-rs = "0.3.0"
+dirs = "6.0.0"
+thiserror = "2.0.16"
+url = "2.5.7"
