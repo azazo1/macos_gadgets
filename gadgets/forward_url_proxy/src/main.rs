@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::Query,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
@@ -22,16 +22,40 @@ struct Args {
     port: u16,
 }
 
-// 定义一个AppState来持有共享的reqwest Client，尽管在这个简单的例子中，
-// 每次请求构建一个新的Client也是可行的，但共享Client通常更高效。
-#[derive(Clone)]
-struct AppState {
-    _http_client: Client,
+fn should_skip_request_header(header_name: &str) -> bool {
+    matches!(
+        header_name,
+        "accept-encoding"
+            | "connection"
+            | "content-length"
+            | "host"
+            | "keep-alive"
+            | "proxy-authenticate"
+            | "proxy-authorization"
+            | "proxy-connection"
+            | "te"
+            | "trailer"
+            | "transfer-encoding"
+            | "upgrade"
+    )
 }
 
-// 异步处理函数，用于转发请求
+fn build_forward_request_headers(headers: &HeaderMap) -> HeaderMap {
+    let mut forwarded_headers = HeaderMap::new();
+
+    for (name, value) in headers {
+        if should_skip_request_header(name.as_str()) {
+            continue;
+        }
+
+        forwarded_headers.append(name.clone(), value.clone());
+    }
+
+    forwarded_headers
+}
+
 async fn forward_request(
-    State(_state): State<AppState>,
+    request_headers: HeaderMap,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
     let url_param = params.get("url");
@@ -98,18 +122,19 @@ async fn forward_request(
         }
     };
 
-    // 执行请求
-    match client.get(target_url).send().await {
+    let forwarded_headers = build_forward_request_headers(&request_headers);
+
+    match client.get(target_url).headers(forwarded_headers).send().await {
         Ok(response) => {
             let status = response.status();
             let mut headers = HeaderMap::new();
 
             // 转发 Content-Type 头
             if let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) {
-                if let Ok(ct_str) = content_type.to_str() {
-                    if let Ok(header_value) = ct_str.parse() {
-                        headers.insert(axum::http::header::CONTENT_TYPE, header_value);
-                    }
+                if let Ok(ct_str) = content_type.to_str()
+                    && let Ok(header_value) = ct_str.parse()
+                {
+                    headers.insert(axum::http::header::CONTENT_TYPE, header_value);
                 }
             } else {
                 // 如果没有Content-Type，默认为text/html
@@ -157,22 +182,73 @@ async fn main() -> Result<()> {
         port
     );
 
-    // 构建应用程序状态 (AppState)
-    let app_state = AppState {
-        // 在这里创建 reqwest Client，可以配置一些默认值
-        _http_client: Client::new(),
-    };
+    let app = Router::new().route("/", get(forward_request));
 
-    // 构建 Axum 路由
-    let app = Router::new()
-        .route("/", get(forward_request))
-        .with_state(app_state); // 将 app_state 传递给所有处理程序
-
-    // 绑定地址并启动服务器
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
     info!("listening on {}", addr);
     let listener = TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app)
         .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) // 转换为 std::io::Error
+        .map_err(|e| std::io::Error::other(e.to_string())) // 转换为 std::io::Error
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_forward_request_headers;
+    use axum::http::{HeaderMap, HeaderValue, header};
+
+    #[test]
+    fn forwards_regular_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer token"));
+        headers.insert("x-test-header", HeaderValue::from_static("value"));
+
+        let forwarded_headers = build_forward_request_headers(&headers);
+
+        assert_eq!(
+            forwarded_headers.get(header::AUTHORIZATION),
+            Some(&HeaderValue::from_static("Bearer token"))
+        );
+        assert_eq!(
+            forwarded_headers.get("x-test-header"),
+            Some(&HeaderValue::from_static("value"))
+        );
+    }
+
+    #[test]
+    fn skips_proxy_sensitive_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::HOST, HeaderValue::from_static("localhost:40211"));
+        headers.insert(header::CONNECTION, HeaderValue::from_static("keep-alive"));
+        headers.insert("proxy-authorization", HeaderValue::from_static("secret"));
+        headers.insert("x-test-header", HeaderValue::from_static("value"));
+
+        let forwarded_headers = build_forward_request_headers(&headers);
+
+        assert!(forwarded_headers.get(header::HOST).is_none());
+        assert!(forwarded_headers.get(header::CONNECTION).is_none());
+        assert!(forwarded_headers.get("proxy-authorization").is_none());
+        assert_eq!(
+            forwarded_headers.get("x-test-header"),
+            Some(&HeaderValue::from_static("value"))
+        );
+    }
+
+    #[test]
+    fn preserves_multiple_header_values() {
+        let mut headers = HeaderMap::new();
+        headers.append(header::COOKIE, HeaderValue::from_static("a=1"));
+        headers.append(header::COOKIE, HeaderValue::from_static("b=2"));
+
+        let forwarded_headers = build_forward_request_headers(&headers);
+        let cookie_values = forwarded_headers
+            .get_all(header::COOKIE)
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        assert_eq!(cookie_values.len(), 2);
+        assert_eq!(cookie_values[0], HeaderValue::from_static("a=1"));
+        assert_eq!(cookie_values[1], HeaderValue::from_static("b=2"));
+    }
 }
